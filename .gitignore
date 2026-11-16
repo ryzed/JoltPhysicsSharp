@@ -267,3 +267,5 @@ artifacts/
 artifacts-*/
 
 build/*
+# Mechs1 fork: natives placed by the mechs1 workflow of ryzed/joltc before packing (-p:Mechs1Natives=true)
+native/mechs1/
