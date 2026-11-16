@@ -35,6 +35,9 @@ public sealed unsafe class PhysicsSystem : NativeObject
     private static readonly JPH_ContactListener_ProcsDouble _contactListener_ProcsDouble;
     private static readonly JPH_BodyActivationListener_Procs _bodyActivationListener_Procs;
 
+    private readonly BroadPhaseLayerInterface? _broadPhaseLayerInterface;
+    private readonly ObjectLayerPairFilter? _objectLayerPairFilter;
+    private readonly ObjectVsBroadPhaseLayerFilter? _objectVsBroadPhaseLayerFilter;
     private readonly nint _listenerUserData;
     private readonly nint _contactListenerHandle;
     private readonly nint _bodyActivationListenerHandle;
@@ -90,6 +93,15 @@ public sealed unsafe class PhysicsSystem : NativeObject
         };
         Handle = JPH_PhysicsSystem_Create(&nativeSettings);
 
+        // JPH_PhysicsSystem_Destroy deletes these three native objects itself: hand ownership over to the system and keep the
+        // managed wrappers alive for as long as the system lives (they may route callbacks into managed code).
+        _broadPhaseLayerInterface = settings.BroadPhaseLayerInterface;
+        _objectLayerPairFilter = settings.ObjectLayerPairFilter;
+        _objectVsBroadPhaseLayerFilter = settings.ObjectVsBroadPhaseLayerFilter;
+        _broadPhaseLayerInterface.ReleaseNativeOwnership();
+        _objectLayerPairFilter.ReleaseNativeOwnership();
+        _objectVsBroadPhaseLayerFilter.ReleaseNativeOwnership();
+
         _listenerUserData = DelegateProxies.CreateUserData(this, true);
         if (!DoublePrecision)
         {
@@ -120,6 +132,11 @@ public sealed unsafe class PhysicsSystem : NativeObject
 
         JPH_PhysicsSystem_Destroy(Handle);
         gch.Free();
+
+        // Native filters are gone with the system; release only the managed side of their wrappers
+        _broadPhaseLayerInterface?.Dispose();
+        _objectLayerPairFilter?.Dispose();
+        _objectVsBroadPhaseLayerFilter?.Dispose();
     }
 
     public PhysicsSettings Settings

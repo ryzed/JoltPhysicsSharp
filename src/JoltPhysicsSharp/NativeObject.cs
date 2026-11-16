@@ -16,10 +16,23 @@ public abstract class NativeObject : IDisposable
     private readonly object _locker = new();
     private ConcurrentDictionary<nint, NativeObject>? _ownedObjects;
 
+    /// <summary>
+    /// Initializes a new instance whose derived constructor creates the native object itself (<c>Handle = JPH_*_Create(...)</c>),
+    /// so the instance owns it and destroys it on <see cref="Dispose()"/>.
+    /// </summary>
+    /// <remarks>
+    /// Previously ownership defaulted to <c>false</c> here, so every constructor that assigned <c>Handle</c> in its body
+    /// (array/span overloads of <c>MeshShapeSettings</c> and <c>ConvexHullShapeSettings</c>, all <c>BodyCreationSettings</c>
+    /// overloads, <c>PhysicsSystem</c>, filters, characters, ...) leaked its native object: shape settings kept their cached
+    /// shape alive and body creation settings kept a reference to the shape.
+    /// </remarks>
     protected NativeObject()
     {
-
+        OwnsHandle = true;
     }
+
+    /// <summary>The native side took ownership (for example a filter handed to <c>JPH_PhysicsSystem_Create</c>): do not destroy it.</summary>
+    internal void ReleaseNativeOwnership() => OwnsHandle = false;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NativeObject" /> class.
